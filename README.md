@@ -26,6 +26,10 @@ kubeadm init --control-plane-endpoint "10.249.216.99:443" --upload-certs --pod-n
 ```shell
 ansible-playbook install.yml -i hosts --tags=join
 ```
+8. 安装网络插件
+```shell
+kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')&env.IPALLOC_RANGE=192.168.0.0/16"
+```
 
 # 参考
 * https://blog.hellojukay.cn/2019/02/26/20190227/
