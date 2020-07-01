@@ -40,3 +40,78 @@
             enabled: yes
         tags: [docker]
 
+- name: install kubeadm  
+  hosts: all
+  become: yes
+  become_user: root
+  become_method: sudo
+  tasks:
+      - name: upload kubernetes.repo
+        copy:
+            src: kubernetes.repo
+            dest: /etc/yum.repos.d/kubernetes.repo
+        tags: [kubeadm]
+      - name: install kubeadm
+        yum:
+            name: kubeadm
+            state: latest
+        tags: [kubeadm]
+
+- name: sysnc docker image
+  hosts: all
+  become: yes
+  become_user: root
+  become_method: sudo
+  tasks:
+      - name: install git
+        yum:
+            name: git
+            state: present
+        tags: [sync-image]
+      - name: git clone https://github.com/hellojukay/k8s-sync.git
+        git:
+            repo: https://github.com/hellojukay/k8s-sync.git
+            dest: /tmp/k8s-sync/
+            version: v1.18.5
+        tags: [sync-image]
+      - name: pull image
+        shell: perl pull.pl
+        args:
+            chdir: /tmp/k8s-sync/
+        register: pull
+        tags: [sync-image]
+      - name: show pull logs
+        debug: var=pull.stdout_lines
+        tags: [sync-image]
+
+- name: set system
+  hosts: all
+  become: yes
+  become_user: root
+  become_method: sudo
+  tasks:
+      - name: stop firewalld
+        systemd:
+            name: firewalld
+            state: stopped
+            enabled: false
+        tags: [system]
+
+- name: join master
+  hosts: master
+  become: yes
+  become_user: root
+  become_method: sudo
+  tasks:
+      - name: join maser
+        shell:   kubeadm join 10.249.216.99:443 --token jupb6p.gzilh71ec9fq3e9e --discovery-token-ca-cert-hash sha256:a911c64eddcde82978e24d472c7f82debb021eadc34ad00cea75fe9259040811 --control-plane --certificate-key 5dc79c4fd8089b2987513d840cccf512f42304da8769e9bbbb37aa964b95689d
+        tags: [join]
+- name: join worker
+  hosts: worker
+  become: yes
+  become_user: root
+  become_method: sudo
+  tasks:
+      - name: join worker
+        shell: kubeadm join 10.249.216.99:443 --token jupb6p.gzilh71ec9fq3e9e --discovery-token-ca-cert-hash sha256:a911c64eddcde82978e24d472c7f82debb021eadc34ad00cea75fe9259040811 
+        tags: [join]
